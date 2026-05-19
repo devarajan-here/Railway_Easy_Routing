@@ -5,11 +5,94 @@ const map = L.map('map', { preferCanvas: true }).setView([20.5937, 78.9629], 5);
 const stationRenderer = L.canvas({ padding: 0.5 });
 const dynamicStationLayer = L.layerGroup().addTo(map);
 window.railwayMap = map;
+let userLocationMarker = null;
+let userAccuracyCircle = null;
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors',
   maxZoom: 19,
 }).addTo(map);
+
+function showUserLocation(position) {
+  const { latitude, longitude, accuracy } = position.coords;
+  const latLng = [latitude, longitude];
+
+  if (!userLocationMarker) {
+    userLocationMarker = L.marker(latLng, {
+      icon: L.divIcon({
+        className: 'user-location-marker',
+        html: '<span></span>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      })
+    }).addTo(map);
+    userLocationMarker.bindTooltip('You are here', {
+      permanent: true,
+      direction: 'top',
+      className: 'station-label user-location-label'
+    });
+  } else {
+    userLocationMarker.setLatLng(latLng);
+  }
+
+  if (!userAccuracyCircle) {
+    userAccuracyCircle = L.circle(latLng, {
+      radius: accuracy || 50,
+      color: '#1e90ff',
+      weight: 2,
+      fillColor: '#1e90ff',
+      fillOpacity: 0.14
+    }).addTo(map);
+  } else {
+    userAccuracyCircle.setLatLng(latLng);
+    userAccuracyCircle.setRadius(accuracy || 50);
+  }
+
+  userLocationMarker.openTooltip();
+  map.setView(latLng, Math.max(map.getZoom(), 15));
+}
+
+function handleUserLocationError(error) {
+  const message = error.code === 1
+    ? 'Location permission was blocked. Allow location access in the browser to use GPS.'
+    : 'Could not detect your location right now.';
+  alert(message);
+}
+
+function locateUser() {
+  if (!navigator.geolocation) {
+    alert('GPS location is not supported in this browser.');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(showUserLocation, handleUserLocationError, {
+    enableHighAccuracy: true,
+    timeout: 12000,
+    maximumAge: 0
+  });
+}
+
+const GpsControl = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd() {
+    const container = L.DomUtil.create('div', 'leaflet-bar gps-control');
+    const button = L.DomUtil.create('button', '', container);
+    button.type = 'button';
+    button.title = 'Show my GPS location';
+    button.setAttribute('aria-label', 'Show my GPS location');
+    button.textContent = 'GPS';
+
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.on(button, 'click', (event) => {
+      L.DomEvent.preventDefault(event);
+      locateUser();
+    });
+
+    return container;
+  }
+});
+
+map.addControl(new GpsControl());
 
 let stations = [];
 let trains = [];
