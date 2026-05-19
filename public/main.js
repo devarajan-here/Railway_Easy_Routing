@@ -1101,6 +1101,14 @@ tabLive.addEventListener('click', () => {
   livePanel.style.display = 'block';
   document.getElementById('results').style.display = 'none';
   exitRouteFocus();
+
+  const trainSelect = document.getElementById('trainSelect');
+  const trainId = trainSelect.value;
+  if (trainId && !liveTrainInterval) {
+    activeLiveTrainName = trainSelect.selectedOptions[0]?.dataset.trainName || trainSelect.selectedOptions[0]?.textContent || '';
+    fetchAndShowLiveStatus(trainId);
+    liveTrainInterval = setInterval(() => fetchAndShowLiveStatus(trainId), 5000);
+  }
 });
 
 // --- LIVE TRACKING LOGIC ---
@@ -1267,6 +1275,10 @@ function updateTrainMarkerRotation(data) {
 
 async function fetchAndShowLiveStatus(trainId) {
   try {
+    const liveStatusText = document.getElementById('liveStatusText');
+    if (!liveTrainMarker) {
+      liveStatusText.textContent = 'Loading live status...';
+    }
     const liveTime = document.getElementById('liveTime').value;
     const params = new URLSearchParams();
     if (liveTime) params.set('time', liveTime);
@@ -1274,9 +1286,13 @@ async function fetchAndShowLiveStatus(trainId) {
     const query = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/trains/${trainId}/live${query}`);
     const data = await res.json();
+    if (!res.ok) {
+      liveStatusText.textContent = data.error || 'Live status request failed';
+      return;
+    }
     
     if (data.error) {
-      document.getElementById('liveStatusText').textContent = data.error;
+      liveStatusText.textContent = data.error;
       return;
     }
 
@@ -1300,5 +1316,6 @@ async function fetchAndShowLiveStatus(trainId) {
     }
   } catch (e) {
     console.error(e);
+    document.getElementById('liveStatusText').textContent = 'Could not load live status right now.';
   }
 }
