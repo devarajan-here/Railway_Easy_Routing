@@ -4,6 +4,7 @@ import { initDb } from './db';
 import stationRoutes from './routes/stationRoutes';
 import trainRoutes from './routes/trainRoutes';
 import placeRoutes from './routes/placeRoutes';
+import trackRoutes from './routes/trackRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +23,7 @@ app.use(express.static('public'));
 app.use('/api/stations', stationRoutes);
 app.use('/api/trains', trainRoutes); // Includes routing logic
 app.use('/api/places', placeRoutes);
+app.use('/api/tracks', trackRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

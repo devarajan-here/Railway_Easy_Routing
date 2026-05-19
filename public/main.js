@@ -637,7 +637,7 @@ function scheduleStationRender() {
 function clearPolylines() {
   // Remove any existing route layers
   map.eachLayer(layer => {
-    if (layer instanceof L.Polyline && layer.options && layer.options.color === '#ff9800') {
+    if (layer instanceof L.Polyline && layer.options && layer.options.routeLayer) {
       map.removeLayer(layer);
     }
   });
@@ -648,6 +648,35 @@ function exitRouteFocus() {
   clearPolylines();
   clearPinnedStationMarkers();
   renderStationMarkers();
+}
+
+async function snapPolylineToTracks(line, polylinePoints) {
+  if (polylinePoints.length < 2) return;
+
+  try {
+    const res = await fetch('/api/tracks/snap', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        points: polylinePoints.map(([lat, lng]) => ({ lat, lng }))
+      })
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data.snapped || !Array.isArray(data.points) || data.points.length < 2) return;
+
+    line.setLatLngs(data.points.map(point => [point.lat, point.lng]));
+    line.setStyle({
+      color: '#00b894',
+      weight: 5,
+      opacity: 0.88,
+      dashArray: null
+    });
+    line.options.snappedToRailway = true;
+  } catch (e) {
+    console.warn('Could not snap route to railway tracks', e);
+  }
 }
 
 function drawItinerary(itin) {
@@ -670,11 +699,18 @@ function drawItinerary(itin) {
     });
 
   });
-  const line = L.polyline(polylinePoints, { color: '#ff9800', weight: 4, opacity: 0.7 }).addTo(map);
+  const line = L.polyline(polylinePoints, {
+    color: '#ff9800',
+    weight: 4,
+    opacity: 0.7,
+    routeLayer: true
+  }).addTo(map);
   line.setStyle({ dashArray: '5, 10' });
+  snapPolylineToTracks(line, polylinePoints);
   // Animate dash offset
   let offset = 0;
   const animate = () => {
+    if (!map.hasLayer(line) || line.options.snappedToRailway) return;
     offset = (offset + 1) % 15;
     line.setStyle({ dashOffset: `${offset}` });
     requestAnimationFrame(animate);
