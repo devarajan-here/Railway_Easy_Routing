@@ -318,6 +318,10 @@ html, body {
   border-left-color: #ff3366;
 }
 
+.manual-location-card {
+  border-left-color: #ff9800;
+}
+
 .nearby-station-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;

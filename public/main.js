@@ -8,6 +8,7 @@ window.railwayMap = map;
 let userLocationMarker = null;
 let userAccuracyCircle = null;
 let placeSearchMarker = null;
+let manualLocationClickHandler = null;
 const nearbyStationLayer = L.layerGroup().addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -15,10 +16,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
 }).addTo(map);
 
-function showUserLocation(position) {
-  const { latitude, longitude, accuracy } = position.coords;
-  const latLng = [latitude, longitude];
-
+function setUserLocation(latLng, accuracy = 50, label = 'You are here') {
   if (!userLocationMarker) {
     userLocationMarker = L.marker(latLng, {
       icon: L.divIcon({
@@ -28,13 +26,14 @@ function showUserLocation(position) {
         iconAnchor: [12, 12]
       })
     }).addTo(map);
-    userLocationMarker.bindTooltip('You are here', {
+    userLocationMarker.bindTooltip(label, {
       permanent: true,
       direction: 'top',
       className: 'station-label user-location-label'
     });
   } else {
     userLocationMarker.setLatLng(latLng);
+    userLocationMarker.setTooltipContent(label);
   }
 
   if (!userAccuracyCircle) {
@@ -52,26 +51,89 @@ function showUserLocation(position) {
 
   userLocationMarker.openTooltip();
   map.setView(latLng, Math.max(map.getZoom(), 15));
+
+  if (stations.length) {
+    showNearbyStations({ lat: latLng[0], lng: latLng[1] }, label);
+  }
 }
 
-function handleUserLocationError(error) {
-  const message = error.code === 1
-    ? 'Location permission was blocked. Allow location access in the browser to use GPS.'
-    : 'Could not detect your location right now.';
-  alert(message);
+function showUserLocation(position) {
+  const { latitude, longitude, accuracy } = position.coords;
+  setUserLocation([latitude, longitude], accuracy || 50, 'You are here');
 }
 
-function locateUser() {
+function locationErrorMessage(error) {
+  if (error.code === 1) {
+    return 'Location permission was blocked. Allow location access in the browser or Windows settings.';
+  }
+  if (error.code === 2) {
+    return 'The browser could not find a location signal from this device.';
+  }
+  if (error.code === 3) {
+    return 'Location request timed out. This can happen on desktop Wi-Fi or weak network.';
+  }
+  return 'Could not detect your location right now.';
+}
+
+function enableManualLocationMode(reason) {
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.style.display = 'block';
+  resultsDiv.innerHTML = `
+    <div class="result-card manual-location-card">
+      <h3>GPS location not available</h3>
+      <p>${reason}</p>
+      <p>Click your position on the map to mark it manually and see nearby railway stations.</p>
+    </div>
+  `;
+
+  if (manualLocationClickHandler) {
+    map.off('click', manualLocationClickHandler);
+  }
+
+  manualLocationClickHandler = (event) => {
+    setUserLocation([event.latlng.lat, event.latlng.lng], 100, 'Selected location');
+    map.off('click', manualLocationClickHandler);
+    manualLocationClickHandler = null;
+  };
+
+  map.once('click', manualLocationClickHandler);
+}
+
+function requestBrowserLocation(options) {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+async function locateUser() {
   if (!navigator.geolocation) {
-    alert('GPS location is not supported in this browser.');
+    enableManualLocationMode('GPS location is not supported in this browser.');
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(showUserLocation, handleUserLocationError, {
-    enableHighAccuracy: true,
-    timeout: 12000,
-    maximumAge: 0
-  });
+  try {
+    showUserLocation(await requestBrowserLocation({
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }));
+    return;
+  } catch (firstError) {
+    if (firstError.code === 1) {
+      enableManualLocationMode(locationErrorMessage(firstError));
+      return;
+    }
+
+    try {
+      showUserLocation(await requestBrowserLocation({
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 60000
+      }));
+    } catch (secondError) {
+      enableManualLocationMode(locationErrorMessage(secondError));
+    }
+  }
 }
 
 const GpsControl = L.Control.extend({
