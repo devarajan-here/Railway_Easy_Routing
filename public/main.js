@@ -1,7 +1,7 @@
 // Frontend logic for Railway Routing Explorer.
 // Uses native fetch and Leaflet (loaded from CDN)
 
-const map = L.map('map', { preferCanvas: true }).setView([20.5937, 78.9629], 5); // Center India
+const map = L.map('map', { preferCanvas: true, attributionControl: false }).setView([20.5937, 78.9629], 5); // Center India
 const stationRenderer = L.canvas({ padding: 0.5 });
 const dynamicStationLayer = L.layerGroup().addTo(map);
 window.railwayMap = map;
@@ -12,7 +12,6 @@ let manualLocationClickHandler = null;
 const nearbyStationLayer = L.layerGroup().addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
   maxZoom: 19,
 }).addTo(map);
 
