@@ -136,8 +136,20 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
         : null
     });
 
-    if (suggestions.length >= 4) break;
+    if (suggestions.length >= 10) break;
   }
 
-  return suggestions;
+  return suggestions
+    .sort((a, b) => {
+      const aTime = a.total_duration_minutes ?? Number.POSITIVE_INFINITY;
+      const bTime = b.total_duration_minutes ?? Number.POSITIVE_INFINITY;
+      if (aTime !== bTime) return aTime - bTime;
+
+      const aOnward = a.onward_options[0]?.total_duration_minutes ?? Number.POSITIVE_INFINITY;
+      const bOnward = b.onward_options[0]?.total_duration_minutes ?? Number.POSITIVE_INFINITY;
+      if (aOnward !== bOnward) return aOnward - bOnward;
+
+      return a.distance_from_source_km - b.distance_from_source_km;
+    })
+    .slice(0, 4);
 }
