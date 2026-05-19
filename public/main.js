@@ -7,6 +7,8 @@ const dynamicStationLayer = L.layerGroup().addTo(map);
 window.railwayMap = map;
 let userLocationMarker = null;
 let userAccuracyCircle = null;
+let placeSearchMarker = null;
+const nearbyStationLayer = L.layerGroup().addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors',
@@ -93,6 +95,178 @@ const GpsControl = L.Control.extend({
 });
 
 map.addControl(new GpsControl());
+
+function distanceKmBetween(a, b) {
+  const earthRadiusKm = 6371;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const deltaLat = (b.lat - a.lat) * Math.PI / 180;
+  const deltaLng = (b.lng - a.lng) * Math.PI / 180;
+  const h = Math.sin(deltaLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function nearestStationsTo(point, limit = 6) {
+  return stations
+    .filter(st => Number.isFinite(st.lat) && Number.isFinite(st.lng))
+    .map(st => ({
+      ...st,
+      distance_km: distanceKmBetween(point, { lat: st.lat, lng: st.lng })
+    }))
+    .sort((a, b) => a.distance_km - b.distance_km)
+    .slice(0, limit);
+}
+
+function showNearbyStations(point, placeName) {
+  nearbyStationLayer.clearLayers();
+  const nearest = nearestStationsTo(point);
+  const resultsDiv = document.getElementById('results');
+
+  nearest.forEach((station, index) => {
+    const marker = createStationDot(station, {
+      radius: index === 0 ? 8 : 6,
+      color: index === 0 ? '#ff9800' : '#00b894',
+      fillColor: index === 0 ? '#ff9800' : '#00b894',
+      permanentLabel: true
+    });
+    marker.bindPopup(`${stationLabel(station)}<br>${station.distance_km.toFixed(1)} km from ${placeName}`);
+    nearbyStationLayer.addLayer(marker);
+  });
+
+  resultsDiv.style.display = 'block';
+  resultsDiv.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'result-card nearby-stations-card';
+  const heading = document.createElement('h3');
+  heading.textContent = `Nearest stations to ${placeName}`;
+  card.appendChild(heading);
+
+  nearest.forEach(station => {
+    const row = document.createElement('div');
+    row.className = 'nearby-station-row';
+
+    const text = document.createElement('span');
+    text.textContent = `${stationLabel(station)} - ${station.distance_km.toFixed(1)} km`;
+    row.appendChild(text);
+
+    const fromButton = document.createElement('button');
+    fromButton.type = 'button';
+    fromButton.textContent = 'From';
+    fromButton.addEventListener('click', () => {
+      setStationSelection(
+        document.getElementById('startStationSearch'),
+        document.getElementById('startStation'),
+        document.getElementById('startStationSuggestions'),
+        station
+      );
+    });
+    row.appendChild(fromButton);
+
+    const toButton = document.createElement('button');
+    toButton.type = 'button';
+    toButton.textContent = 'To';
+    toButton.addEventListener('click', () => {
+      setStationSelection(
+        document.getElementById('endStationSearch'),
+        document.getElementById('endStation'),
+        document.getElementById('endStationSuggestions'),
+        station
+      );
+    });
+    row.appendChild(toButton);
+
+    card.appendChild(row);
+  });
+
+  resultsDiv.appendChild(card);
+}
+
+async function searchPlace(query) {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return;
+
+  const params = new URLSearchParams({ q: cleanQuery });
+  const response = await fetch(`/api/places/search?${params.toString()}`);
+  if (!response.ok) throw new Error('Location search failed');
+
+  const matches = await response.json();
+  if (!Array.isArray(matches) || matches.length === 0) {
+    alert('Location not found. Try adding state name, like "Thoothukudi Tamil Nadu".');
+    return;
+  }
+
+  const place = matches[0];
+  const point = {
+    lat: Number(place.lat),
+    lng: Number(place.lon)
+  };
+  const placeName = place.name || cleanQuery;
+
+  if (!placeSearchMarker) {
+    placeSearchMarker = L.marker([point.lat, point.lng], {
+      icon: L.divIcon({
+        className: 'place-search-marker',
+        html: '<span></span>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 26]
+      })
+    }).addTo(map);
+  } else {
+    placeSearchMarker.setLatLng([point.lat, point.lng]);
+  }
+
+  placeSearchMarker.bindTooltip(placeName, {
+    permanent: true,
+    direction: 'top',
+    className: 'station-label place-search-label'
+  }).openTooltip();
+
+  routeFocusActive = false;
+  map.setView([point.lat, point.lng], 13);
+  showNearbyStations(point, placeName);
+}
+
+const PlaceSearchControl = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd() {
+    const container = L.DomUtil.create('div', 'leaflet-bar place-search-control');
+    const form = L.DomUtil.create('form', '', container);
+    const input = L.DomUtil.create('input', '', form);
+    const button = L.DomUtil.create('button', '', form);
+
+    input.type = 'search';
+    input.placeholder = 'Search place';
+    input.setAttribute('aria-label', 'Search place on map');
+    button.type = 'submit';
+    button.title = 'Search place';
+    button.setAttribute('aria-label', 'Search place');
+    button.textContent = 'Go';
+
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+    L.DomEvent.on(form, 'submit', async (event) => {
+      L.DomEvent.preventDefault(event);
+      button.disabled = true;
+      button.textContent = '...';
+      try {
+        await searchPlace(input.value);
+      } catch (e) {
+        console.error(e);
+        alert('Could not search this place right now.');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Go';
+      }
+    });
+
+    return container;
+  }
+});
+
+map.addControl(new PlaceSearchControl());
 
 let stations = [];
 let trains = [];

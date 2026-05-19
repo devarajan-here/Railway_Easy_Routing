@@ -33,6 +33,69 @@ html, body {
   background: #f1f5f9;
 }
 
+.place-search-control {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 4px;
+}
+
+.place-search-control form {
+  display: flex;
+  width: 220px;
+  height: 34px;
+}
+
+.place-search-control input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-right: 1px solid #d0d7de;
+  padding: 0 9px;
+  border-radius: 4px 0 0 4px;
+  color: #111;
+  font-size: 12px;
+  outline: none;
+}
+
+.place-search-control button {
+  width: 44px;
+  border: 0;
+  border-radius: 0 4px 4px 0;
+  background: #1e90ff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.place-search-control button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.place-search-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.place-search-marker span {
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: #ff3366;
+  box-shadow: 0 2px 10px rgba(255, 51, 102, 0.65);
+  transform: rotate(-45deg);
+}
+
+.place-search-label {
+  color: #7a0826;
+}
+
 .user-location-marker {
   position: relative;
   width: 24px;
@@ -249,6 +312,40 @@ html, body {
 
 .track-live-btn:hover {
   background: #ffb13d;
+}
+
+.nearby-stations-card {
+  border-left-color: #ff3366;
+}
+
+.nearby-station-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #f0f0f5;
+  font-size: 0.84rem;
+}
+
+.nearby-station-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nearby-station-row button {
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 6px;
+  background: rgba(30, 144, 255, 0.92);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.nearby-station-row button:hover {
+  background: #378aff;
 }
 
 .suggestion-card {
