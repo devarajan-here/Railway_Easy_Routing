@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Railway Routing Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="control-panel" class="glass">
+    <div class="tabs">
+      <button id="tabRoute" class="active">Find Route</button>
+      <button id="tabLive">Live Status</button>
+    </div>
+
+    <div id="routePanel">
+      <label for="startStation">From:</label>
+      <input type="text" id="startStationSearch" autocomplete="off" placeholder="Search station or code" />
+      <input type="hidden" id="startStation" />
+      <div id="startStationSuggestions" class="station-suggestions"></div>
+
+      <label for="endStation">To:</label>
+      <input type="text" id="endStationSearch" autocomplete="off" placeholder="Search station or code" />
+      <input type="hidden" id="endStation" />
+      <div id="endStationSuggestions" class="station-suggestions"></div>
+
+      <label for="travelDate">Date:</label>
+      <input type="date" id="travelDate" />
+
+      <button id="findRouteBtn">Search</button>
+    </div>
+
+    <div id="livePanel" style="display: none;">
+      <label for="trainSelect">Select Train:</label>
+      <select id="trainSelect"></select>
+
+      <label for="liveTime">Time:</label>
+      <input type="time" id="liveTime" />
+      
+      <div id="liveStatusText" style="margin-top: 10px; font-size: 0.9em; color: #ff9800; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <div id="results" class="glass"></div>
+
+  <!-- Leaflet JS -->
+  <script src="/leaflet/leaflet.js"></script>
+  <script src="/main.js?v=20260519-route-suggestions" type="module"></script>
+</body>
+</html>
