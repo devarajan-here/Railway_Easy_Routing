@@ -140,6 +140,29 @@ html, body {
   background: #378aff;
 }
 
+.creator-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.16);
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.72);
+}
+
+.creator-link a {
+  color: #ff9800;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.creator-link a:hover {
+  color: #ffb13d;
+  text-decoration: underline;
+}
+
 #results {
   position: absolute;
   bottom: 20px;
