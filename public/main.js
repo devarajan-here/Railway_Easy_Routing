@@ -280,11 +280,12 @@ async function searchPlace(query) {
     placeSearchMarker.setLatLng([point.lat, point.lng]);
   }
 
-  placeSearchMarker.bindTooltip(placeName, {
-    permanent: true,
+  placeSearchMarker.bindTooltip(`Searched place: ${placeName}`, {
+    permanent: false,
     direction: 'top',
     className: 'station-label place-search-label'
-  }).openTooltip();
+  });
+  placeSearchMarker.bindPopup(`Searched place: ${placeName}`);
 
   routeFocusActive = false;
   map.setView([point.lat, point.lng], 13);
