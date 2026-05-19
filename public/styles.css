@@ -360,6 +360,16 @@ html, body {
   border-left-color: #ff9800;
 }
 
+.connected-route-title {
+  color: #fff;
+  font-weight: 800;
+}
+
+.result-card .connected-route-leg {
+  color: #d6e0e4;
+  padding-left: 8px;
+}
+
 .suggestion-btn {
   margin-top: 8px;
   padding: 8px 12px;

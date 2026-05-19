@@ -738,6 +738,22 @@ function segmentLabel(seg) {
   return `${seg.train_name}: ${seg.from_station_name} (${seg.departure_time}) -> ${seg.to_station_name} (${seg.arrival_time}${legArrivalDay ? `, ${legArrivalDay}` : ''}) - ${formatDuration(seg.duration_minutes)}`;
 }
 
+function appendItinerarySegments(card, title, itinerary) {
+  if (!itinerary || !Array.isArray(itinerary.segments) || itinerary.segments.length === 0) return;
+
+  const titleEl = document.createElement('p');
+  titleEl.className = 'connected-route-title';
+  titleEl.textContent = title;
+  card.appendChild(titleEl);
+
+  itinerary.segments.forEach((seg, index) => {
+    const p = document.createElement('p');
+    p.className = 'connected-route-leg';
+    p.textContent = `${index + 1}. ${segmentLabel(seg)}`;
+    card.appendChild(p);
+  });
+}
+
 function renderRouteSuggestions(suggestions, source, dest, date) {
   const resultsDiv = document.getElementById('results');
 
@@ -780,17 +796,15 @@ function renderRouteSuggestions(suggestions, source, dest, date) {
     summary.textContent = `${Math.round(suggestion.distance_from_source_km)} km from your start station. ${totalDuration}.`;
     card.appendChild(summary);
 
-    const access = document.createElement('p');
-    access.textContent = bestAccess
-      ? `First leg: ${segmentLabel(bestAccess.segments[0])}`
-      : `First leg: ${suggestion.access_note}`;
-    card.appendChild(access);
-
-    if (bestOnward) {
-      const onward = document.createElement('p');
-      onward.textContent = `Then: ${segmentLabel(bestOnward.segments[0])}`;
-      card.appendChild(onward);
+    if (bestAccess) {
+      appendItinerarySegments(card, 'Connected first train:', bestAccess);
+    } else {
+      const access = document.createElement('p');
+      access.textContent = `First leg: ${suggestion.access_note}`;
+      card.appendChild(access);
     }
+
+    appendItinerarySegments(card, 'Then continue:', bestOnward);
 
     const button = document.createElement('button');
     button.type = 'button';

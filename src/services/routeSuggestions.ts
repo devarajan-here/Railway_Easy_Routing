@@ -21,7 +21,7 @@ export interface RouteSuggestion {
 const preferredHubIds = [
   'TCR', 'ERS', 'CBE', 'PGT', 'SA', 'SBC', 'YPR', 'MYS', 'MAS', 'MS', 'MAQ', 'MAJN',
   'TVC', 'MDU', 'TPJ', 'ED', 'KJM', 'BNC', 'NDLS', 'ADI', 'BCT', 'LTT', 'CSMT', 'HWH',
-  'PUNE', 'KYN', 'PNVL'
+  'PUNE', 'KYN', 'PNVL', 'TN', 'TME', 'KLPM'
 ];
 
 function isInterchange(station: StationPoint) {
@@ -62,11 +62,16 @@ function getCandidateHubs(source: StationPoint, destinationId: string) {
     .map(station => ({
       station,
       distance: distanceKm(source, station),
-      preferred: preferredHubIds.includes(station.id) ? 0 : 1
+      preferred: preferredHubIds.includes(station.id) ? 0 : 1,
+      nearby: 0
     }))
-    .filter(item => item.distance <= 220 || item.preferred === 0)
-    .sort((a, b) => a.preferred - b.preferred || a.distance - b.distance)
-    .slice(0, 14);
+    .filter(item => item.distance <= 260 || item.preferred === 0)
+    .map(item => ({
+      ...item,
+      nearby: item.distance <= 80 ? 0 : 1
+    }))
+    .sort((a, b) => a.nearby - b.nearby || a.distance - b.distance || a.preferred - b.preferred)
+    .slice(0, 40);
 
   const seen = new Set<string>();
   return scored
@@ -136,7 +141,8 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
         : null
     });
 
-    if (suggestions.length >= 10) break;
+    const confirmedSuggestions = suggestions.filter(suggestion => suggestion.total_duration_minutes !== null);
+    if (confirmedSuggestions.length >= 10 || suggestions.length >= 18) break;
   }
 
   return suggestions
