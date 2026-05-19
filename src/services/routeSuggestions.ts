@@ -10,8 +10,11 @@ interface StationPoint {
 }
 
 export interface RouteSuggestion {
+  suggestion_type?: 'interchange' | 'near_destination';
   hub: StationPoint;
   distance_from_source_km: number;
+  distance_to_destination_km?: number;
+  final_destination?: StationPoint;
   access_note: string;
   access_options: OnlineItinerary[];
   onward_options: OnlineItinerary[];
@@ -83,6 +86,25 @@ function getCandidateHubs(source: StationPoint, destinationId: string) {
     .map(item => ({ ...item.station, distance_from_source_km: item.distance }));
 }
 
+function getNearbyDestinationStations(sourceId: string, destination: StationPoint) {
+  const rows = db.prepare(`
+    SELECT id, name, latitude as lat, longitude as lng
+    FROM stations
+    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+  `).all() as StationPoint[];
+
+  return rows
+    .filter(station => station.id !== sourceId && station.id !== destination.id)
+    .map(station => ({
+      ...station,
+      distance_to_destination_km: distanceKm(destination, station),
+      important: isInterchange(station) ? 0 : 1
+    }))
+    .filter(station => station.distance_to_destination_km <= 90)
+    .sort((a, b) => a.distance_to_destination_km - b.distance_to_destination_km || a.important - b.important)
+    .slice(0, 30);
+}
+
 function mergeRoutes(onlineRoutes: OnlineItinerary[], localRoutes: OnlineItinerary[]) {
   const seen = new Set<string>();
   return [...onlineRoutes, ...localRoutes].filter(route => {
@@ -95,7 +117,8 @@ function mergeRoutes(onlineRoutes: OnlineItinerary[], localRoutes: OnlineItinera
 
 export async function findRouteSuggestions(sourceId: string, destinationId: string, requestedDate: Date) {
   const source = getStation(sourceId);
-  if (!source) return [];
+  const destination = getStation(destinationId);
+  if (!source || !destination) return [];
 
   const suggestions: RouteSuggestion[] = [];
   const hubs = getCandidateHubs(source, destinationId);
@@ -124,6 +147,7 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
     const bestOnward = onwardOptions[0];
 
     suggestions.push({
+      suggestion_type: 'interchange',
       hub: {
         id: hub.id,
         name: hub.name,
@@ -145,11 +169,52 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
     if (confirmedSuggestions.length >= 10 || suggestions.length >= 18) break;
   }
 
+  const confirmedSuggestions = suggestions.filter(suggestion => suggestion.total_duration_minutes !== null);
+  if (confirmedSuggestions.length < 4) {
+    const nearbyDestinations = getNearbyDestinationStations(sourceId, destination);
+
+    for (const nearbyDestination of nearbyDestinations) {
+      let directOnline: OnlineItinerary[] = [];
+      try {
+        directOnline = await fetchOnlineDirectRoutes(sourceId, nearbyDestination.id, requestedDate);
+      } catch {
+        directOnline = [];
+      }
+
+      const accessOptions = mergeRoutes(directOnline, findRoutes(sourceId, nearbyDestination.id, requestedDate)).slice(0, 3);
+      const bestAccess = accessOptions[0];
+      if (!bestAccess) continue;
+
+      suggestions.push({
+        suggestion_type: 'near_destination',
+        hub: {
+          id: nearbyDestination.id,
+          name: nearbyDestination.name,
+          lat: nearbyDestination.lat,
+          lng: nearbyDestination.lng
+        },
+        final_destination: destination,
+        distance_from_source_km: Math.round(distanceKm(source, nearbyDestination)),
+        distance_to_destination_km: Math.round(nearbyDestination.distance_to_destination_km),
+        access_note: `Take a train to ${nearbyDestination.name}, then continue about ${Math.round(nearbyDestination.distance_to_destination_km)} km to ${destination.name}.`,
+        access_options: accessOptions,
+        onward_options: [],
+        total_duration_minutes: bestAccess.total_duration_minutes
+      });
+
+      if (suggestions.filter(suggestion => suggestion.total_duration_minutes !== null).length >= 10) break;
+    }
+  }
+
   return suggestions
     .sort((a, b) => {
       const aTime = a.total_duration_minutes ?? Number.POSITIVE_INFINITY;
       const bTime = b.total_duration_minutes ?? Number.POSITIVE_INFINITY;
       if (aTime !== bTime) return aTime - bTime;
+
+      const aDestinationDistance = a.distance_to_destination_km ?? Number.POSITIVE_INFINITY;
+      const bDestinationDistance = b.distance_to_destination_km ?? Number.POSITIVE_INFINITY;
+      if (aDestinationDistance !== bDestinationDistance) return aDestinationDistance - bDestinationDistance;
 
       const aOnward = a.onward_options[0]?.total_duration_minutes ?? Number.POSITIVE_INFINITY;
       const bOnward = b.onward_options[0]?.total_duration_minutes ?? Number.POSITIVE_INFINITY;

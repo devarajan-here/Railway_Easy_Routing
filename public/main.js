@@ -787,14 +787,20 @@ function renderRouteSuggestions(suggestions, source, dest, date) {
     const totalDuration = suggestion.total_duration_minutes
       ? `Approx train time after confirmed legs: ${formatDuration(suggestion.total_duration_minutes)}`
       : `Reach ${suggestion.hub.name} first, then continue by train`;
+    const distanceText = suggestion.suggestion_type === 'near_destination'
+      ? `${Math.round(suggestion.distance_to_destination_km)} km from ${suggestion.final_destination?.name || 'your destination'}`
+      : `${Math.round(suggestion.distance_from_source_km)} km from your start station`;
+    const headingText = suggestion.suggestion_type === 'near_destination'
+      ? `Suggestion ${idx + 1}: train to nearby ${suggestion.hub.name} (${suggestion.hub.id})`
+      : `Suggestion ${idx + 1}: go via ${suggestion.hub.name} (${suggestion.hub.id})`;
 
     const heading = document.createElement('h3');
-    heading.textContent = `Suggestion ${idx + 1}: go via ${suggestion.hub.name} (${suggestion.hub.id})`;
+    heading.textContent = headingText;
     card.appendChild(heading);
 
     const summary = document.createElement('p');
     summary.className = 'route-summary';
-    summary.textContent = `${Math.round(suggestion.distance_from_source_km)} km from your start station. ${totalDuration}.`;
+    summary.textContent = `${distanceText}. ${totalDuration}.`;
     card.appendChild(summary);
 
     if (bestAccess) {
@@ -810,14 +816,24 @@ function renderRouteSuggestions(suggestions, source, dest, date) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'suggestion-btn';
-    button.textContent = `Search ${suggestion.hub.id} -> ${dest}`;
+    button.textContent = suggestion.suggestion_type === 'near_destination'
+      ? `Search ${source} -> ${suggestion.hub.id}`
+      : `Search ${suggestion.hub.id} -> ${dest}`;
     button.addEventListener('click', () => {
       const hubStation = stations.find(st => st.id === suggestion.hub.id) || suggestion.hub;
-      const startInput = document.getElementById('startStationSearch');
-      const startHidden = document.getElementById('startStation');
-      const startSuggestions = document.getElementById('startStationSuggestions');
-      setStationSelection(startInput, startHidden, startSuggestions, hubStation);
-      searchRoutes(suggestion.hub.id, dest, date);
+      if (suggestion.suggestion_type === 'near_destination') {
+        const endInput = document.getElementById('endStationSearch');
+        const endHidden = document.getElementById('endStation');
+        const endSuggestions = document.getElementById('endStationSuggestions');
+        setStationSelection(endInput, endHidden, endSuggestions, hubStation);
+        searchRoutes(source, suggestion.hub.id, date);
+      } else {
+        const startInput = document.getElementById('startStationSearch');
+        const startHidden = document.getElementById('startStation');
+        const startSuggestions = document.getElementById('startStationSuggestions');
+        setStationSelection(startInput, startHidden, startSuggestions, hubStation);
+        searchRoutes(suggestion.hub.id, dest, date);
+      }
     });
     card.appendChild(button);
 
