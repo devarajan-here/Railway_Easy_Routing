@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Railway Easy Routing Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin.css" />
+</head>
+<body class="admin-body">
+  <main class="admin-shell glass">
+    <header class="admin-header">
+      <div>
+        <p class="tour-kicker">Admin dashboard</p>
+        <h1>Railway Easy Routing</h1>
+        <p>Monitor users and onboarding completion.</p>
+      </div>
+      <a href="/">Back to app</a>
+    </header>
+
+    <section class="admin-stats">
+      <article>
+        <span>Total users</span>
+        <strong id="totalUsers">0</strong>
+      </article>
+      <article>
+        <span>Completed tours</span>
+        <strong id="completedTours">0</strong>
+      </article>
+      <article>
+        <span>Active sessions</span>
+        <strong id="activeSessions">0</strong>
+      </article>
+    </section>
+
+    <section class="admin-table-wrap">
+      <h2>Recent users</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Tour</th>
+            <th>Joined</th>
+            <th>Last seen</th>
+          </tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+      </table>
+    </section>
+
+    <p id="adminMessage"></p>
+  </main>
+
+  <script src="/admin.js?v=20260519-auth-admin-tour" type="module"></script>
+</body>
+</html>

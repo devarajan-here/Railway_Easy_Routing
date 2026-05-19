@@ -13,9 +13,47 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card glass">
+      <div class="auth-brand">
+        <img src="/favicon.svg" alt="" />
+        <div>
+          <h1>Railway Easy Routing</h1>
+          <p>Sign in to plan routes, track trains, and explore nearby stations.</p>
+        </div>
+      </div>
+
+      <form id="authForm">
+        <div id="nameField">
+          <label for="authName">Name</label>
+          <input type="text" id="authName" autocomplete="name" />
+        </div>
+
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" autocomplete="email" required />
+
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required minlength="6" />
+
+        <button id="authSubmit" type="submit">Create Account</button>
+        <p id="authMessage"></p>
+      </form>
+
+      <button id="authModeToggle" class="link-button" type="button">Already have an account? Sign in</button>
+    </div>
+  </div>
+
   <div id="map"></div>
 
   <div id="control-panel" class="glass">
+    <div class="account-bar">
+      <span id="userGreeting">Welcome</span>
+      <div>
+        <a id="adminLink" href="/admin.html" style="display: none;">Admin</a>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+
     <div class="tabs">
       <button id="tabRoute" class="active">Find Route</button>
       <button id="tabLive">Live Status</button>
@@ -56,8 +94,23 @@
 
   <div id="results" class="glass"></div>
 
+  <div id="tourOverlay" class="tour-overlay">
+    <div class="tour-card glass">
+      <p class="tour-kicker">Quick tour</p>
+      <h2 id="tourTitle">Find routes between stations</h2>
+      <p id="tourText">Type station names or codes, choose a date, and search. The app checks online train data first.</p>
+      <div class="tour-progress">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <button id="tourNextBtn" type="button">Next</button>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="/leaflet/leaflet.js"></script>
-  <script src="/main.js?v=20260519-blue-glass-ui" type="module"></script>
+  <script src="/main.js?v=20260519-auth-admin-tour" type="module"></script>
 </body>
 </html>

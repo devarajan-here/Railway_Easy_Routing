@@ -10,6 +10,142 @@ let userAccuracyCircle = null;
 let placeSearchMarker = null;
 let manualLocationClickHandler = null;
 const nearbyStationLayer = L.layerGroup().addTo(map);
+let currentUser = null;
+let authMode = 'register';
+let tourStep = 0;
+const tourSteps = [
+  {
+    title: 'Find routes between stations',
+    text: 'Type station names or codes, choose a date, and search. The app checks online train data first.'
+  },
+  {
+    title: 'See routes on the map',
+    text: 'Routes draw across stations and snap to OpenStreetMap railway tracks when track geometry is available.'
+  },
+  {
+    title: 'Track live train movement',
+    text: 'Use Live Status or Track buttons to simulate current train position from timetable data.'
+  },
+  {
+    title: 'Search places and nearby stations',
+    text: 'Use the left map search or GPS/manual location to find nearby working railway stations quickly.'
+  }
+];
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const isRegister = mode === 'register';
+  document.getElementById('nameField').style.display = isRegister ? 'block' : 'none';
+  document.getElementById('authSubmit').textContent = isRegister ? 'Create Account' : 'Sign In';
+  document.getElementById('authModeToggle').textContent = isRegister
+    ? 'Already have an account? Sign in'
+    : 'New here? Create an account';
+  document.getElementById('authPassword').setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
+  document.getElementById('authMessage').textContent = '';
+}
+
+async function authRequest(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function showAppForUser(user) {
+  currentUser = user;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('userGreeting').textContent = `Hi, ${user.name}`;
+  document.getElementById('adminLink').style.display = user.is_admin ? 'inline' : 'none';
+
+  if (!user.tour_completed) {
+    startTour();
+  } else {
+    document.getElementById('tourOverlay').classList.add('hidden');
+  }
+}
+
+function showAuthScreen() {
+  currentUser = null;
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('tourOverlay').classList.add('hidden');
+}
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      showAuthScreen();
+      return;
+    }
+    const data = await res.json();
+    if (data.user) showAppForUser(data.user);
+    else showAuthScreen();
+  } catch {
+    showAuthScreen();
+  }
+}
+
+function renderTourStep() {
+  const step = tourSteps[tourStep];
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourText').textContent = step.text;
+  document.getElementById('tourNextBtn').textContent = tourStep === tourSteps.length - 1 ? 'Start using app' : 'Next';
+  document.querySelectorAll('.tour-progress span').forEach((dot, index) => {
+    dot.classList.toggle('active', index <= tourStep);
+  });
+}
+
+function startTour() {
+  tourStep = 0;
+  renderTourStep();
+  document.getElementById('tourOverlay').classList.remove('hidden');
+}
+
+async function completeTour() {
+  const data = await authRequest('/api/auth/tour-complete');
+  showAppForUser(data.user);
+}
+
+document.getElementById('authModeToggle').addEventListener('click', () => {
+  setAuthMode(authMode === 'register' ? 'login' : 'register');
+});
+
+document.getElementById('authForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const message = document.getElementById('authMessage');
+  message.textContent = '';
+
+  try {
+    const body = {
+      name: document.getElementById('authName').value,
+      email: document.getElementById('authEmail').value,
+      password: document.getElementById('authPassword').value
+    };
+    const data = await authRequest(authMode === 'register' ? '/api/auth/register' : '/api/auth/login', body);
+    showAppForUser(data.user);
+  } catch (e) {
+    message.textContent = e.message || 'Authentication failed';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await authRequest('/api/auth/logout');
+  showAuthScreen();
+});
+
+document.getElementById('tourNextBtn').addEventListener('click', async () => {
+  if (tourStep < tourSteps.length - 1) {
+    tourStep += 1;
+    renderTourStep();
+    return;
+  }
+
+  await completeTour();
+});
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -938,6 +1074,8 @@ async function searchRoutes(sourceOverride, destOverride, dateOverride) {
 document.getElementById('findRouteBtn').addEventListener('click', () => searchRoutes());
 
 // Initial load
+setAuthMode('register');
+checkAuth();
 loadStationsAndTrains();
 map.on('zoomend moveend', scheduleStationRender);
 

@@ -5,6 +5,7 @@ import stationRoutes from './routes/stationRoutes';
 import trainRoutes from './routes/trainRoutes';
 import placeRoutes from './routes/placeRoutes';
 import trackRoutes from './routes/trackRoutes';
+import authRoutes from './routes/authRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,7 @@ app.use(express.static('public'));
 
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/stations', stationRoutes);
 app.use('/api/trains', trainRoutes); // Includes routing logic
 app.use('/api/places', placeRoutes);

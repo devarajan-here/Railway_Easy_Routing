@@ -35,11 +35,33 @@ export function initDb() {
       FOREIGN KEY(train_id) REFERENCES trains(id),
       FOREIGN KEY(station_id) REFERENCES stations(id)
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      password_salt TEXT NOT NULL,
+      is_admin INTEGER NOT NULL DEFAULT 0,
+      tour_completed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_schedules_train_sequence ON schedules (train_id, stop_sequence);
     CREATE INDEX IF NOT EXISTS idx_schedules_station ON schedules (station_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions (user_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
   `);
 
   // Seed or refresh data if the old tiny mock database is present.
