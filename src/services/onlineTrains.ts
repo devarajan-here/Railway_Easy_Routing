@@ -51,6 +51,10 @@ export interface OnlineItinerary {
   source?: string;
 }
 
+type OnlineScheduleResult = Awaited<ReturnType<typeof buildOnlineTrainSchedule>>;
+const onlineScheduleCache = new Map<string, { expiresAt: number; value: OnlineScheduleResult }>();
+const ONLINE_SCHEDULE_CACHE_MS = 12 * 60 * 60 * 1000;
+
 function decodeHtml(value: string) {
   return value
     .replace(/&quot;/g, '"')
@@ -174,7 +178,7 @@ function parseScheduleRows(html: string): OnlineScheduleStop[] {
   return rows;
 }
 
-export async function fetchOnlineTrainSchedule(trainId: string, trainName: string) {
+async function buildOnlineTrainSchedule(trainId: string, trainName: string) {
   const slug = slugifyTrainName(trainName);
   const url = `https://etrain.info/train/${slug}-${encodeURIComponent(trainId)}/schedule`;
   const response = await fetch(url, {
@@ -198,6 +202,23 @@ export async function fetchOnlineTrainSchedule(trainId: string, trainName: strin
     },
     schedule: stops
   };
+}
+
+export async function fetchOnlineTrainSchedule(trainId: string, trainName: string) {
+  const cacheKey = `${trainId}:${trainName.toLowerCase()}`;
+  const cached = onlineScheduleCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const value = await buildOnlineTrainSchedule(trainId, trainName);
+  if (value) {
+    onlineScheduleCache.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + ONLINE_SCHEDULE_CACHE_MS
+    });
+  }
+  return value;
 }
 
 function parseRows(html: string) {
