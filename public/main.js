@@ -317,7 +317,7 @@ function nearestStationsTo(point, limit = 6) {
     .slice(0, limit);
 }
 
-function showNearbyStations(point, placeName) {
+function showNearbyStations(point, placeName, extraContent) {
   nearbyStationLayer.clearLayers();
   const nearest = nearestStationsTo(point);
   const resultsDiv = document.getElementById('results');
@@ -341,6 +341,10 @@ function showNearbyStations(point, placeName) {
   const heading = document.createElement('h3');
   heading.textContent = `Nearest stations to ${placeName}`;
   card.appendChild(heading);
+
+  if (extraContent) {
+    card.appendChild(extraContent);
+  }
 
   nearest.forEach(station => {
     const row = document.createElement('div');
@@ -382,26 +386,17 @@ function showNearbyStations(point, placeName) {
   resultsDiv.appendChild(card);
 }
 
-async function searchPlace(query) {
-  const cleanQuery = query.trim();
-  if (!cleanQuery) return;
-
-  const params = new URLSearchParams({ q: cleanQuery });
-  const response = await fetch(`/api/places/search?${params.toString()}`);
-  if (!response.ok) throw new Error('Location search failed');
-
-  const matches = await response.json();
-  if (!Array.isArray(matches) || matches.length === 0) {
-    alert('Location not found. Try adding state name, like "Thoothukudi Tamil Nadu".');
-    return;
-  }
-
-  const place = matches[0];
+function pinPlace(place, fallbackName) {
   const point = {
     lat: Number(place.lat),
     lng: Number(place.lon)
   };
-  const placeName = place.name || cleanQuery;
+  const placeName = place.name || fallbackName;
+
+  if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) {
+    alert('This place result does not have valid coordinates.');
+    return;
+  }
 
   if (!placeSearchMarker) {
     placeSearchMarker = L.marker([point.lat, point.lng], {
@@ -421,11 +416,61 @@ async function searchPlace(query) {
     direction: 'top',
     className: 'station-label place-search-label'
   });
-  placeSearchMarker.bindPopup(`Searched place: ${placeName}`);
+  placeSearchMarker.bindPopup(`Searched place: ${place.display_name || placeName}`);
 
   routeFocusActive = false;
-  map.setView([point.lat, point.lng], 13);
+  map.setView([point.lat, point.lng], 15);
   showNearbyStations(point, placeName);
+}
+
+function renderPlaceSuggestions(matches, query) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'place-suggestion-list';
+  const title = document.createElement('p');
+  title.className = 'connected-route-title';
+  title.textContent = 'Did you mean?';
+  wrapper.appendChild(title);
+
+  matches.slice(0, 5).forEach(place => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'place-suggestion-btn';
+    button.textContent = place.display_name || place.name || query;
+    button.addEventListener('click', () => pinPlace(place, query));
+    wrapper.appendChild(button);
+  });
+
+  return wrapper;
+}
+
+async function searchPlace(query) {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return;
+
+  const params = new URLSearchParams({ q: cleanQuery });
+  const response = await fetch(`/api/places/search?${params.toString()}`);
+  if (!response.ok) throw new Error('Location search failed');
+
+  const matches = await response.json();
+  if (!Array.isArray(matches) || matches.length === 0) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = `
+      <div class="result-card manual-location-card">
+        <h3>Location not found</h3>
+        <p>Try a pincode, nearby town, state name, or a plus code like 9H86+6X8, Hutagalli, Karnataka 571130.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const place = matches[0];
+  pinPlace(place, cleanQuery);
+
+  if (matches.length > 1 || place.source === 'plus_code') {
+    const point = { lat: Number(place.lat), lng: Number(place.lon) };
+    showNearbyStations(point, place.name || cleanQuery, renderPlaceSuggestions(matches, cleanQuery));
+  }
 }
 
 const PlaceSearchControl = L.Control.extend({

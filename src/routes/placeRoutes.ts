@@ -1,7 +1,18 @@
 import { Router } from 'express';
+const OpenLocationCode = require('open-location-code').OpenLocationCode;
 
 const router = Router();
 const USER_AGENT = 'RailwayEasyRouting/1.0 (https://devarajan.site)';
+const openLocationCode = new OpenLocationCode();
+
+interface PlaceResult {
+  place_id?: string | number;
+  name?: string;
+  display_name?: string;
+  lat: string;
+  lon: string;
+  source?: string;
+}
 
 function normalizePlaceQuery(query: string) {
   return query
@@ -38,6 +49,20 @@ function queryCandidates(query: string) {
   return [...candidates].filter(Boolean);
 }
 
+function extractPlusCode(query: string) {
+  const match = query.toUpperCase().match(/\b[23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{2,}\b/);
+  if (!match) return null;
+
+  const code = match[0];
+  const referenceQuery = query
+    .replace(match[0], '')
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/^,\s*|\s*,\s*$/g, '')
+    .trim();
+
+  return { code, referenceQuery };
+}
+
 async function searchNominatimFreeform(query: string) {
   const params = new URLSearchParams({
     q: query,
@@ -54,9 +79,9 @@ async function searchNominatimFreeform(query: string) {
     }
   });
 
-  if (!response.ok) return [];
+  if (!response.ok) return [] as PlaceResult[];
   const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? data as PlaceResult[] : [];
 }
 
 async function searchNominatimPincode(pincode: string) {
@@ -75,9 +100,9 @@ async function searchNominatimPincode(pincode: string) {
     }
   });
 
-  if (!response.ok) return [];
+  if (!response.ok) return [] as PlaceResult[];
   const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? data as PlaceResult[] : [];
 }
 
 async function searchPhoton(query: string) {
@@ -125,7 +150,77 @@ async function searchPhoton(query: string) {
         lon: String(lon),
         source: 'photon'
       };
-    });
+    }) as PlaceResult[];
+}
+
+function dedupePlaces(results: PlaceResult[]) {
+  const seen = new Set<string>();
+  return results.filter(result => {
+    const key = `${Number(result.lat).toFixed(5)},${Number(result.lon).toFixed(5)}:${result.display_name || result.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function searchAllCandidates(query: string) {
+  const pincode = query.match(/\b\d{6}\b/)?.[0];
+  const collected: PlaceResult[] = [];
+
+  for (const candidate of queryCandidates(query)) {
+    collected.push(...await searchNominatimFreeform(candidate));
+    if (collected.length >= 3) break;
+  }
+
+  if (pincode && collected.length < 3) {
+    collected.push(...await searchNominatimPincode(pincode));
+  }
+
+  if (collected.length < 3) {
+    for (const candidate of queryCandidates(query)) {
+      collected.push(...await searchPhoton(candidate));
+      if (collected.length >= 3) break;
+    }
+  }
+
+  return dedupePlaces(collected).slice(0, 5);
+}
+
+async function resolvePlusCode(query: string) {
+  const plusCode = extractPlusCode(query);
+  if (!plusCode) return null;
+
+  try {
+    let fullCode = plusCode.code;
+
+    if (!openLocationCode.isFull(plusCode.code)) {
+      const referenceResults = plusCode.referenceQuery
+        ? await searchAllCandidates(plusCode.referenceQuery)
+        : [];
+      const reference = referenceResults[0];
+      if (!reference) return null;
+
+      fullCode = openLocationCode.recoverNearest(
+        plusCode.code,
+        Number(reference.lat),
+        Number(reference.lon)
+      );
+    }
+
+    const decoded = openLocationCode.decode(fullCode);
+    const name = plusCode.referenceQuery || plusCode.code;
+    return {
+      place_id: `plus:${fullCode}`,
+      name,
+      display_name: `${plusCode.code}, ${name}`,
+      lat: String(decoded.latitudeCenter),
+      lon: String(decoded.longitudeCenter),
+      source: 'plus_code'
+    } as PlaceResult;
+  } catch (err) {
+    console.warn('Plus code lookup failed:', err);
+    return null;
+  }
 }
 
 router.get('/search', async (req, res) => {
@@ -135,30 +230,12 @@ router.get('/search', async (req, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    const pincode = query.match(/\b\d{6}\b/)?.[0];
-
-    for (const candidate of queryCandidates(query)) {
-      const nominatimResults = await searchNominatimFreeform(candidate);
-      if (nominatimResults.length > 0) {
-        return res.json(nominatimResults);
-      }
+    const plusCodeResult = await resolvePlusCode(query);
+    if (plusCodeResult) {
+      return res.json([plusCodeResult]);
     }
 
-    if (pincode) {
-      const pincodeResults = await searchNominatimPincode(pincode);
-      if (pincodeResults.length > 0) {
-        return res.json(pincodeResults);
-      }
-    }
-
-    for (const candidate of queryCandidates(query)) {
-      const photonResults = await searchPhoton(candidate);
-      if (photonResults.length > 0) {
-        return res.json(photonResults);
-      }
-    }
-
-    res.json([]);
+    res.json(await searchAllCandidates(query));
   } catch (err) {
     console.error('Error searching place:', err);
     res.status(500).json({ error: 'Internal server error' });

@@ -552,6 +552,28 @@ body::before {
   background: var(--blue-700);
 }
 
+.place-suggestion-list {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 10px;
+}
+
+.place-suggestion-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(13, 74, 128, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--blue-800);
+  text-align: left;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.place-suggestion-btn:hover {
+  background: rgba(18, 135, 232, 0.1);
+}
+
 .station-label {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(13, 74, 128, 0.18);
