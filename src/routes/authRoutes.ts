@@ -1,6 +1,6 @@
-import { Router, Request } from 'express';
-import crypto from 'crypto';
-import db from '../db';
+const { Router } = require('express');
+const crypto = require('crypto');
+const db = require('../db');
 
 const router = Router();
 const SESSION_DAYS = 14;
@@ -34,7 +34,7 @@ function safeUser(user: UserRow) {
   };
 }
 
-function parseCookies(req: Request) {
+function parseCookies(req) {
   const header = req.headers.cookie || '';
   return Object.fromEntries(
     header
@@ -54,7 +54,7 @@ function clearSessionCookie() {
   return 'railway_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0';
 }
 
-function getSessionUser(req: Request) {
+function getSessionUser(req) {
   const token = parseCookies(req).railway_session;
   if (!token) return null;
 
@@ -174,4 +174,4 @@ router.get('/admin/stats', (req, res) => {
   });
 });
 
-export default router;
+module.exports = router;
