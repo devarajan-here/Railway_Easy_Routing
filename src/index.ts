@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import { initDb } from './db.ts';
-import stationRoutes from './routes/stationRoutes.ts';
-import trainRoutes from './routes/trainRoutes.ts';
-import placeRoutes from './routes/placeRoutes.ts';
-import trackRoutes from './routes/trackRoutes.ts';
-import authRoutes from './routes/authRoutes.ts';
+import { initDb } from './db';
+import stationRoutes from './routes/stationRoutes';
+import trainRoutes from './routes/trainRoutes';
+import placeRoutes from './routes/placeRoutes';
+import trackRoutes from './routes/trackRoutes';
+import authRoutes from './routes/authRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

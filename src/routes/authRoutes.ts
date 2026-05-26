@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Request } from 'express';
 import crypto from 'crypto';
-import db from '../db.ts';
+import db from '../db';
 
 const router = Router();
 const SESSION_DAYS = 14;

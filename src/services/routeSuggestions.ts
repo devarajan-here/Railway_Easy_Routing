@@ -1,6 +1,6 @@
-import db from '../db.ts';
-import { findRoutes } from './routing.ts';
-import { fetchOnlineDirectRoutes } from './onlineTrains.ts';
+import db from '../db';
+import { findRoutes } from './routing';
+import { fetchOnlineDirectRoutes } from './onlineTrains';
 
 interface StationPoint {
   id: string;
@@ -16,8 +16,8 @@ export interface RouteSuggestion {
   distance_to_destination_km?: number;
   final_destination?: StationPoint;
   access_note: string;
-  access_options: OnlineItinerary[];
-  onward_options: OnlineItinerary[];
+  access_options: any[];
+  onward_options: any[];
   total_duration_minutes: number | null;
 }
 
@@ -105,7 +105,7 @@ function getNearbyDestinationStations(sourceId: string, destination: StationPoin
     .slice(0, 30);
 }
 
-function mergeRoutes(onlineRoutes: OnlineItinerary[], localRoutes: OnlineItinerary[]) {
+function mergeRoutes(onlineRoutes: any[], localRoutes: any[]) {
   const seen = new Set<string>();
   return [...onlineRoutes, ...localRoutes].filter(route => {
     const key = route.segments.map(segment => segment.train_id).join('|');
@@ -124,8 +124,8 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
   const hubs = getCandidateHubs(source, destinationId);
 
   for (const hub of hubs) {
-    let onwardOnline: OnlineItinerary[] = [];
-    let accessOnline: OnlineItinerary[] = [];
+    let onwardOnline: any[] = [];
+    let accessOnline: any[] = [];
 
     try {
       onwardOnline = await fetchOnlineDirectRoutes(hub.id, destinationId, requestedDate);
@@ -174,7 +174,7 @@ export async function findRouteSuggestions(sourceId: string, destinationId: stri
     const nearbyDestinations = getNearbyDestinationStations(sourceId, destination);
 
     for (const nearbyDestination of nearbyDestinations) {
-      let directOnline: OnlineItinerary[] = [];
+      let directOnline: any[] = [];
       try {
         directOnline = await fetchOnlineDirectRoutes(sourceId, nearbyDestination.id, requestedDate);
       } catch {

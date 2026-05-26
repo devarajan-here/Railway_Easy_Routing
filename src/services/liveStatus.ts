@@ -1,4 +1,4 @@
-import db from '../db.ts';
+import db from '../db';
 
 interface ScheduleStop {
   arrival_time: string | null;
