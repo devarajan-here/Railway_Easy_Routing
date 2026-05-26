@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import db from '../db';
-import { findRoutes } from '../services/routing';
-import { getLiveTrainStatus, getLiveTrainStatusFromSchedule } from '../services/liveStatus';
-import { fetchOnlineDirectRoutes, fetchOnlineTrainSchedule } from '../services/onlineTrains';
-import { findRouteSuggestions } from '../services/routeSuggestions';
+import db from '../db.ts';
+import { findRoutes } from '../services/routing.ts';
+import { getLiveTrainStatus, getLiveTrainStatusFromSchedule } from '../services/liveStatus.ts';
+import { fetchOnlineDirectRoutes, fetchOnlineTrainSchedule } from '../services/onlineTrains.ts';
+import { findRouteSuggestions } from '../services/routeSuggestions.ts';
 
 const router = Router();
 
