@@ -1,11 +1,11 @@
-const express = require('express');
-const cors = require('cors');
-const { initDb } = require('./db');
-const stationRoutes = require('./routes/stationRoutes');
-const trainRoutes = require('./routes/trainRoutes');
-const placeRoutes = require('./routes/placeRoutes');
-const trackRoutes = require('./routes/trackRoutes');
-const authRoutes = require('./routes/authRoutes');
+import express from 'express';
+import cors from 'cors';
+import { initDb } from './db.ts';
+import stationRoutes from './routes/stationRoutes.ts';
+import trainRoutes from './routes/trainRoutes.ts';
+import placeRoutes from './routes/placeRoutes.ts';
+import trackRoutes from './routes/trackRoutes.ts';
+import authRoutes from './routes/authRoutes.ts';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

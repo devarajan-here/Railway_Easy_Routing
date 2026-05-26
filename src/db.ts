@@ -1,7 +1,9 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.resolve(__dirname, '../railway.db');
 const db = new Database(dbPath);
 
@@ -193,4 +195,4 @@ function insertDemoTrainSchedules(
   insertSchedule.run('T5', 'MYS', '09:10', null, 14, 1);
 }
 
-module.exports = db;
+export default db;

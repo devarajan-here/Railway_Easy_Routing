@@ -1,6 +1,7 @@
-const { Router } = require('express');
-const crypto = require('crypto');
-const db = require('../db');
+import { Router } from 'express';
+import type { Request } from 'express';
+import crypto from 'crypto';
+import db from '../db.ts';
 
 const router = Router();
 const SESSION_DAYS = 14;
@@ -34,7 +35,7 @@ function safeUser(user: UserRow) {
   };
 }
 
-function parseCookies(req) {
+function parseCookies(req: Request) {
   const header = req.headers.cookie || '';
   return Object.fromEntries(
     header
@@ -54,7 +55,7 @@ function clearSessionCookie() {
   return 'railway_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0';
 }
 
-function getSessionUser(req) {
+function getSessionUser(req: Request) {
   const token = parseCookies(req).railway_session;
   if (!token) return null;
 
@@ -174,4 +175,4 @@ router.get('/admin/stats', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

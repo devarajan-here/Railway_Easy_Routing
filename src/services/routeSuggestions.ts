@@ -1,6 +1,6 @@
-import db from '../db';
-import { findRoutes } from './routing';
-import { fetchOnlineDirectRoutes, OnlineItinerary } from './onlineTrains';
+import db from '../db.ts';
+import { findRoutes } from './routing.ts';
+import { fetchOnlineDirectRoutes } from './onlineTrains.ts';
 
 interface StationPoint {
   id: string;

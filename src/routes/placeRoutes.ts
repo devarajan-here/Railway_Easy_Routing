@@ -1,5 +1,5 @@
 import { Router } from 'express';
-const OpenLocationCode = require('open-location-code').OpenLocationCode;
+import { OpenLocationCode } from 'open-location-code';
 
 const router = Router();
 const USER_AGENT = 'RailwayEasyRouting/1.0 (https://devarajan.site)';

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { snapRouteToRailway } from '../services/trackSnap';
+import { snapRouteToRailway } from '../services/trackSnap.ts';
 
 const router = Router();
 
